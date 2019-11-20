@@ -132,10 +132,10 @@ def setBunchParamsPTC(bunch):
 	"""
 	(mass, charge, kin_energy) = ptc_get_syncpart_()
 	mass = mass * consts.mass_proton
+	bunch.mass(mass)
 	syncPart = bunch.getSyncParticle()
 	syncPart.kinEnergy(kin_energy)
 	bunch.charge(charge)
-	bunch.mass(mass)
 
 
 def readAccelTablePTC(Acc_File):
