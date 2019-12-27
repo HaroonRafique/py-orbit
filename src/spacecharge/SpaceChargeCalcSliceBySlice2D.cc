@@ -80,24 +80,53 @@ void SpaceChargeCalcSliceBySlice2D::trackBunch(Bunch* bunch, double length, Base
 	ORBIT_MPI_Comm_size(MPI_COMM_WORLD, &size);
 	int nZ = rhoGrid3D->getSizeZ();
 	
+
+	// faster implementation of calculating and synchronizing phi grid
 	for(int iz = 0; iz < nZ; iz++){
 		if(rank == iz%size){
 			// calculate the potential on the temporary 2D phiGrid
 			poissonSolver->findPotential(rhoGrid3D->getGrid2D(iz), phiGrid3D->getGrid2D(iz));
 			if(boundary != NULL){        
-				//update potential with boundary condition		
+				//update potential with boundary condition              
 				boundary->addBoundaryPotential(rhoGrid3D->getGrid2D(iz), phiGrid3D->getGrid2D(iz));
-				//std::cerr<<"Boundary ADDED."<<std::endl;	
+				//std::cerr<<"Boundary ADDED."<<std::endl;      
 			}
-		}
-		else{
-			phiGrid3D->getGrid2D(iz)->setZero();
 		}
 	}
 
 	// synchronize the 3D phiGrid
-	phiGrid3D->synchronizeMPI(bunch->getMPI_Comm_Local());
-	
+	int root = 0;
+	int nX = rhoGrid3D->getSizeX();
+	int nY = rhoGrid3D->getSizeY();
+	int size_XYgrid = nX * nY;
+
+
+	int buff_index0 = 0;
+	double* outArr = BufferStore::getBufferStore()->getFreeDoubleArr(buff_index0,size_XYgrid);
+	int count;
+
+	for(int iz = 0; iz < nZ; iz++){
+		root = iz%size;
+		count = 0;
+		for(int ix = 0; ix < nX; ix++){
+			for(int iy = 0; iy < nY; iy++){
+				outArr[count] = phiGrid3D->getValueOnGrid(ix,iy,iz);
+				count += 1;
+			}
+		}
+		ORBIT_MPI_Bcast(outArr, size_XYgrid, MPI_DOUBLE, root, MPI_COMM_WORLD);
+		count = 0;
+		for(int ix = 0; ix < nX; ix++){
+			for(int iy = 0; iy < nY; iy++){
+				phiGrid3D->setValue(outArr[count], ix,iy,iz);
+				count += 1;
+			}
+		}
+	}
+	OrbitUtils::BufferStore::getBufferStore()->setUnusedDoubleArr(buff_index0);
+
+	//////////
+
 	SyncPart* syncPart = bunch->getSyncPart();	
 	double scFactor = 2 * length / rhoGrid3D->getStepZ() * bunch->getClassicalRadius() * 
 						pow(bunch->getCharge(),2) / (pow(syncPart->getBeta(),2) * pow(syncPart->getGamma(),3));	
