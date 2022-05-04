@@ -2,6 +2,13 @@
 # Linux g++ for creation of ORBIT interpreter executable
 ######################################################################
 
+ifeq ($(DEBUG),yes)
+CXXFLAGS       += -g
+else
+CXXFLAGS       += -O3
+endif
+
 CXX             =  ${MPI_CPP}
-CXXFLAGS       += -g -O3 -DUSE_MPI=1 -I /usr/local/include/
+CXXFLAGS       += -DUSE_MPI=1 -I /usr/local/include/
 LINKFLAGS      += -dynamic -L/usr/local/lib
+

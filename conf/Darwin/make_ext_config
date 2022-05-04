@@ -2,6 +2,17 @@
 # Linux g++ for creation of shared libraries
 ######################################################################
 
+FORTFLAGS = 
+
+ifeq ($(DEBUG),yes)
+CXXFLAGS       += -g
+FORTFLAGS      += -g
+else
+CXXFLAGS       += -O3
+FORTFLAGS      += -O4
+endif
+
 CXX             =  ${MPI_CPP}
-CXXFLAGS       += -g -fPIC -DUSE_MPI=1
-LINKFLAGS      += -fPIC -shared -Wl,--export-dynamic
+CXXFLAGS       += -fPIC -DUSE_MPI=1
+FORTFLAGS      += -fpic
+LINKFLAGS      += -fPIC -shared -Wl,--export-dynamic  -Wl,-no_compact_unwind
